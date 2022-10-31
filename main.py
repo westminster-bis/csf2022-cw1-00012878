@@ -1,135 +1,139 @@
-#source https://www.edureka.co/blog/snake-game-with-pygame/
-#Task:
-# Demonstrate your knowledge of Python by modifying a small simple game, “Hungry Snake”, where you need to demonstrate your knowledge of
-# python syntax, use of 3 different data types, conditionals, loop, functions. Well commented and organised code will receive higher marks.
-# Procedural or object-oriented approach to programming is appreciated. Modifications can include input from the  user, adding different levels
-# with increasing difficulty, more snakes on screen, snakes with changing colours. Use your creativity!
-#
-# The code examples should be pushed to a private git repository.
-
-import pygame
-import time
+import sys
 import random
+import pygame
+from pygame.math import Vector2
 
-pygame.init()
+class Snake:
+    def __init__(self):
+        self.body = [Vector2(5, 10), Vector2(4, 10), Vector2(3, 10)]
+        self.direction = Vector2(1, 0)
+        self.is_growing = False
+        self.counter = 0
 
-white = (255, 255, 255)
-yellow = (255, 255, 102)
-black = (0, 0, 0)
-red = (213, 50, 80)
-green = (0, 255, 0)
-blue = (50, 153, 213)
+    def draw(self):
+        for vec in self.body:
+            snake_body = pygame.Rect(vec.x * CELL_SIZE, vec.y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+            pygame.draw.rect(screen, WHITE, snake_body)
 
-dis_width = 600
-dis_height = 400
+    def move(self):
+        if self.is_growing:
+            snake_body = self.body[:]
+            snake_body.insert(0, snake_body[0] + self.direction)
+            self.body = snake_body[:]
+            self.is_growing = False
+        else:
+            snake_body = self.body[:-1]
+            snake_body.insert(0, snake_body[0] + self.direction)
+            self.body = snake_body[:]
 
-dis = pygame.display.set_mode((dis_width, dis_height))
-pygame.display.set_caption('Snake Game by Edureka')
-
-clock = pygame.time.Clock()
-
-snake_block = 10
-snake_speed = 15
-
-font_style = pygame.font.SysFont("bahnschrift", 25)
-score_font = pygame.font.SysFont("comicsansms", 35)
-
-
-def Your_score(score):
-    value = score_font.render("Your Score: " + str(score), True, yellow)
-    dis.blit(value, [0, 0])
-
-
-def our_snake(snake_block, snake_list):
-    for x in snake_list:
-        pygame.draw.rect(dis, black, [x[0], x[1], snake_block, snake_block])
+    def grow(self):
+        self.is_growing = True
 
 
-def message(msg, color):
-    mesg = font_style.render(msg, True, color)
-    dis.blit(mesg, [dis_width / 6, dis_height / 3])
+class Food:
+    def __init__(self):
+        self.regenerate()
+    
+    def draw(self):
+        x = self.pos.x * CELL_SIZE
+        y = self.pos.y * CELL_SIZE
+        food = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
+        pygame.draw.rect(screen, RED, food)
 
+    def regenerate(self):
+        # Randomizing the x and y appearance position of the food.
+        self.x = random.randint(0, CELL_AMOUNT - 1)
+        self.y = random.randint(0, CELL_AMOUNT - 1)
+        # Using Vector2 instead of list since vector is more readable when accesing 
+        # its elements.
+        self.pos = Vector2(self.x, self.y)
 
-def gameLoop():
-    game_over = False
-    game_close = False
+# Declaring the grid cell size and amount of 30px and 20px respectively.
+CELL_SIZE = 30
+CELL_AMOUNT = 20
 
-    x1 = dis_width / 2
-    y1 = dis_height / 2
+# WIDTH, HEIGHT = CELL_SIZE * CELL_AMOUNT, CELL_SIZE * CELL_AMOUNT
 
-    x1_change = 0
-    y1_change = 0
+# Setting the screen size of 600x600 px.
+DIMENSION = CELL_SIZE * CELL_AMOUNT
+screen = pygame.display.set_mode((DIMENSION, DIMENSION))
 
-    snake_List = []
-    Length_of_snake = 1
+# Declaring constant color variables and fps value.
+WHITE = (255, 255, 255)
+GREEN = (86, 199, 123)
+RED = (199, 40, 40)
+FPS = 60
 
-    foodx = round(random.randrange(0, dis_width - snake_block) / 10.0) * 10.0
-    foody = round(random.randrange(0, dis_height - snake_block) / 10.0) * 10.0
+# Setting the caption of the window.
+pygame.display.set_caption("Snake Game")
 
-    while not game_over:
+# Main game function that is executed when the application is opened directly (not imported 
+# by some other code).
+def main():
+    # Screen update function.
+    def draw_screen():
+        screen.fill(GREEN)
+        food.draw()
+        snake.draw()
+        pygame.display.update()
+    
+    # Collision checking function.
+    def check_collision():
+        if (snake.body[0] == food.pos):
+            food.regenerate()
+            snake.counter += 1
+            # Snake will grow every 3 times it eats the food.
+            if snake.counter > 3:
+                snake.counter = 0
+                snake.grow()
 
-        while game_close == True:
-            dis.fill(blue)
-            message("You Lost! Press C-Play Again or Q-Quit", red)
-            Your_score(Length_of_snake - 1)
-            pygame.display.update()
+    # Check wether the snake hit itself or went out of the viewport.
+    def check_fail():
+        # Check if snake is out of the viewport.
+        if (snake.body[0].x < 0 or snake.body[0].x >= CELL_AMOUNT) or (snake.body[0].y < 0 or snake.body[0].y >= CELL_AMOUNT):
+            pygame.quit()
+            sys.exit()
+        
+        # Check if snake hit itself.
+        for i in snake.body[1:]:
+            if snake.body[0] == i:
+                pygame.quit()
+                sys.exit()
 
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_q:
-                        game_over = True
-                        game_close = False
-                    if event.key == pygame.K_c:
-                        gameLoop()
+    food = Food()
+    snake = Snake()
+    clock = pygame.time.Clock()
 
+    # Checking for the user input on every 100ms.
+    pygame.time.set_timer(pygame.USEREVENT, 100)
+
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                game_over = True
+                pygame.quit()
+                sys.exit()
+            if  event.type == pygame.USEREVENT:
+                snake.move()
+                check_collision()
+                check_fail()
+            # Checking for the user input.
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    x1_change = -snake_block
-                    y1_change = 0
-                elif event.key == pygame.K_RIGHT:
-                    x1_change = snake_block
-                    y1_change = 0
-                elif event.key == pygame.K_UP:
-                    y1_change = -snake_block
-                    x1_change = 0
+                if event.key == pygame.K_UP:
+                    if (snake.direction != Vector2(0, 1)):
+                        snake.direction = Vector2(0, -1)
                 elif event.key == pygame.K_DOWN:
-                    y1_change = snake_block
-                    x1_change = 0
+                    if (snake.direction != Vector2(0, -1)):
+                        snake.direction = Vector2(0, 1)
+                elif event.key == pygame.K_RIGHT:
+                    if (snake.direction != Vector2(-1, 0)):
+                        snake.direction = Vector2(1, 0)
+                elif event.key == pygame.K_LEFT:
+                    if (snake.direction != Vector2(1, 0)):
+                        snake.direction = Vector2(-1, 0) 
+        draw_screen()
+        clock.tick(FPS)
 
-        if x1 >= dis_width or x1 < 0 or y1 >= dis_height or y1 < 0:
-            game_close = True
-        x1 += x1_change
-        y1 += y1_change
-        dis.fill(blue)
-        pygame.draw.rect(dis, green, [foodx, foody, snake_block, snake_block])
-        snake_Head = []
-        snake_Head.append(x1)
-        snake_Head.append(y1)
-        snake_List.append(snake_Head)
-        if len(snake_List) > Length_of_snake:
-            del snake_List[0]
-
-        for x in snake_List[:-1]:
-            if x == snake_Head:
-                game_close = True
-
-        our_snake(snake_block, snake_List)
-        Your_score(Length_of_snake - 1)
-
-        pygame.display.update()
-
-        if x1 == foodx and y1 == foody:
-            foodx = round(random.randrange(0, dis_width - snake_block) / 10.0) * 10.0
-            foody = round(random.randrange(0, dis_height - snake_block) / 10.0) * 10.0
-            Length_of_snake += 1
-
-        clock.tick(snake_speed)
-
-    pygame.quit()
-    quit()
-
-
-gameLoop()
+# Execute main() when the application is executed directly.
+# main() will not execute, if external code will import this script.
+if __name__ == "__main__":
+    main()
