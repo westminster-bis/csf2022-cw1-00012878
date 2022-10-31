@@ -12,7 +12,6 @@ pygame.mixer.pre_init(44100, -16, 2, 512)
 
 class Snake:
     def __init__(self):
-        # self.body = [Vector2(5, 10), Vector2(4, 10), Vector2(3, 10)]
         # Initial upward snake direction.
         self.body = [Vector2(10, 17), Vector2(10, 18), Vector2(10, 19)]
         self.direction = Vector2(0, -1)
