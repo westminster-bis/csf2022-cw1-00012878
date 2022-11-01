@@ -19,6 +19,7 @@ Enjoy!
 Created by 00012878
 
 ## Reference
+Please find the Referencing in Westminster-Harvard style in the Coursework "Part A" report.
 Audio and Graphics sources:
 1. https://rembound.com/files/creating-a-snake-game-tutorial-with-html5/snake-graphics.png
 2. https://www.pngrepo.com/
