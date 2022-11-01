@@ -13,10 +13,14 @@ pygame.mixer.pre_init(44100, -16, 2, 512)
 class Snake:
     def __init__(self):
         # Initial upward snake direction.
-        self.body = [Vector2(10, 17), Vector2(10, 18), Vector2(10, 19)]
+        self.body = [Vector2(10, 16), Vector2(10, 17), Vector2(10, 18)]
         self.direction = Vector2(0, -1)
+
+        # Snake properties.
         self.is_growing = False
         self.counter = 0
+        self.is_hardcore = False
+        self.hardcore_counter = 0
 
         # Graphics.
         self.head = head_up
@@ -101,7 +105,7 @@ class Food:
         y = self.pos.y * CELL_SIZE
         # Food rectangle.
         food = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
-        screen.blit(apple_img, food)
+        screen.blit(self.food_img, food)
         # pygame.draw.rect(screen, RED, food)
 
     def regenerate(self):
@@ -111,6 +115,10 @@ class Food:
         # Using Vector2 instead of list since vector is more readable when accesing 
         # its elements.
         self.pos = Vector2(self.x, self.y)
+        # Random food creation.
+        self.index = random.randint(0, len(food_imgs) - 1)
+        self.food_img = food_imgs[self.index]
+        self.is_eaten = False
 
 # Declaring the grid cell size and amount of 30px and 20px respectively.
 CELL_SIZE = 30
@@ -126,6 +134,7 @@ screen = pygame.display.set_mode((DIMENSION, DIMENSION))
 BLACK = (0, 0, 0)
 GREEN = (75, 179, 30)
 DARK_GREEN = (73, 168, 32)
+RED = (245, 5, 5)
 FPS = 60
 
 # Setting the caption of the window.
@@ -134,6 +143,17 @@ pygame.display.set_caption("Snake Game")
 # Importing graphics and scaling down to the grid cell size.
 apple_img = pygame.image.load(os.path.join("graphics", "apple.png")).convert_alpha()
 apple_img = pygame.transform.scale(apple_img, (CELL_SIZE, CELL_SIZE))
+banana_img = pygame.image.load(os.path.join("graphics", "banana.png")).convert_alpha()
+banana_img = pygame.transform.scale(banana_img, (CELL_SIZE, CELL_SIZE))
+cherry_img = pygame.image.load(os.path.join("graphics", "cherry.png")).convert_alpha()
+cherry_img = pygame.transform.scale(cherry_img, (CELL_SIZE, CELL_SIZE))
+grapes_img = pygame.image.load(os.path.join("graphics", "grapes.png")).convert_alpha()
+grapes_img = pygame.transform.scale(grapes_img, (CELL_SIZE, CELL_SIZE))
+mouse_img = pygame.image.load(os.path.join("graphics", "mouse.png")).convert_alpha()
+mouse_img = pygame.transform.scale(mouse_img, (CELL_SIZE, CELL_SIZE))
+
+food_imgs = [apple_img, banana_img, cherry_img, grapes_img, mouse_img]
+
 
 head_up = pygame.image.load(os.path.join("graphics", "head_up.png")).convert_alpha()
 head_up = pygame.transform.scale(head_up, (CELL_SIZE, CELL_SIZE))
@@ -169,63 +189,121 @@ body_bl = pygame.transform.scale(body_bl, (CELL_SIZE, CELL_SIZE))
 
 # Font.
 score_font = pygame.font.Font(os.path.join("fonts", "Ubuntu-Regular.ttf"), 20)
+warn_font = pygame.font.Font(os.path.join("fonts", "Ubuntu-Regular.ttf"), 70)
 
 # Sound effects.
 pygame.mixer.music.load(os.path.join("audio", "bg.mp3"))
 hiss_sound = pygame.mixer.Sound(os.path.join("audio", "hiss.wav"))
-eating_sound = pygame.mixer.Sound(os.path.join("audio", "eating.wav"))
+apple_eating_sound = pygame.mixer.Sound(os.path.join("audio", "eating.wav"))
+soft_eating_sound = pygame.mixer.Sound(os.path.join("audio", "soft_eating.wav"))
+burp_eating_sound = pygame.mixer.Sound(os.path.join("audio", "burp_eating.wav"))
 hungry_eating_sound = pygame.mixer.Sound(os.path.join("audio", "hungry_eating.wav"))
 joy_sound = pygame.mixer.Sound(os.path.join("audio", "enjoy.wav"))
+laugh_sound = pygame.mixer.Sound(os.path.join("audio", "laugh.wav"))
 fail_sound = pygame.mixer.Sound(os.path.join("audio", "fail.wav"))
 
 pygame.mixer.music.set_volume(.7)
 pygame.mixer.music.play(loops=-1)
 
+
 # Main game function that is executed when the application is opened directly (not imported 
 # by some other code).
 def main():
+    # Game restart function.
+    def restart():
+        snake.body = [Vector2(10, 16), Vector2(10, 17), Vector2(10, 18)]
+        snake.direction = Vector2(0, -1)
+        snake.counter = 0
+        snake.is_hardcore = False
+        snake.hardcore_counter = 0
+        snake_speed = 100
+        pygame.time.set_timer(pygame.USEREVENT, snake_speed)
+        
+        
     # Screen update function.
     def draw_screen():
         screen.fill(GREEN)
         prettify_grid()
         snake.draw()
-        food.draw()
+        first_food.draw()
+        second_food.draw()
+        third_food.draw()
+        
+        # Fixing the bug when the food appears on the body of the snake
+        # and on the other food.
+        for i in snake.body[1:]:
+            if i == first_food.pos:
+                first_food.regenerate()
+            if i == second_food.pos:
+                second_food.regenerate()
+            if i == third_food.pos:
+                third_food.regenerate()
+            if first_food.pos == second_food.pos:
+                first_food.regenerate()
+            if second_food.pos == third_food.pos:
+                second_food.regenerate()
+            if third_food.pos == first_food.pos:
+                third_food.regenerate()
+
         display_score()
+        # Display warning before the hard-core mode.
+        if (snake.counter + 1) % 15 == 0 and snake.counter != 0:
+            display_warning()
+
         pygame.display.update()
     
-    # Collision checking function.
-    def check_eating():
-        if (snake.body[0] == food.pos):
-            food.regenerate()
-            snake.counter += 1
-
+    # Collision checking functions.
+    def check_internal(food_instance):
+        if snake.body[0] == food_instance.pos:
             # Eating sound play.
+            if food_instance.index == 0:
+                apple_eating_sound.play()
+            elif food_instance.index == 4:
+                burp_eating_sound.play()
+            else:
+                soft_eating_sound.play()
+
+            # Food regeneration.
+            food_instance.regenerate()
+
+            # Incresing the score value.        
+            snake.counter += 1
+            
+            # Hard core mode checking.
+            if snake.is_hardcore:
+                snake.hardcore_counter += 1
+            hardcore_check()
+
+            # Eating sound play with accordance to the score.
             if snake.counter % 6 == 0:
                 hungry_eating_sound.play()
-            else:
-                eating_sound.play()
 
-            # Snake will grow every 2 times it eats the food.
-            if snake.counter % 2 == 0:
+            # Snake will grow every 2 times it eats the food and will keep growing until score 50.
+            if snake.counter % 2 == 0 and snake.counter < 60:
                 snake.grow()
             # Play joy sound every 10 points. 
             if snake.counter % 10 == 0:
                 joy_sound.play()
+
+    def check_eating():
+        check_internal(first_food)
+        check_internal(second_food)
+        check_internal(third_food)
+        
 
     # Check wether the snake hit itself or went out of the viewport.
     def check_fail():
         # Check if snake is out of the viewport.
         if (snake.body[0].x < 0 or snake.body[0].x >= CELL_AMOUNT) or (snake.body[0].y < 0 or snake.body[0].y >= CELL_AMOUNT):
             fail_sound.play()
-            pygame.quit()
-            sys.exit()
+            restart()
         
         # Check if snake hit itself.
         for i in snake.body[1:]:
             if snake.body[0] == i:
                 fail_sound.play()
-                pygame.quit()
-                sys.exit()
+                restart()
+                
     
     # Creating chess-alike grid color pattern.
     def prettify_grid():
@@ -249,12 +327,46 @@ def main():
         score_rect = score_surface.get_rect(center = (x, y))
         screen.blit(score_surface, score_rect)
 
-    food = Food()
+    # Warning display.
+    def display_warning():
+        x, y = CELL_SIZE + 20, CELL_SIZE * CELL_AMOUNT - 50
+        warn_surface = warn_font.render("!", True, RED)
+        warn_rect = warn_surface.get_rect(center = (x, y))
+        screen.blit(warn_surface, warn_rect)
+    
+    # Hard-core mode.
+    def hardcore_check():
+        if snake.is_hardcore == False:
+            # Turn on hard-core on every 15th point.
+            if snake.counter % 15 == 0:
+                snake.is_hardcore = True
+                laugh_sound.play()
+                if snake.hardcore_counter < 4:
+                    snake_speed = 50
+                else:
+                    snake_speed = 100
+                    snake.is_hardcore = False
+                    snake.hardcore_counter = 0
+                pygame.time.set_timer(pygame.USEREVENT, snake_speed)
+        else:
+            if snake.hardcore_counter < 4:
+                snake_speed = 50
+            else:
+                snake_speed = 100
+                snake.is_hardcore = False
+                snake.hardcore_counter = 0
+            pygame.time.set_timer(pygame.USEREVENT, snake_speed)
+
+    first_food = Food()
+    second_food = Food()
+    third_food = Food()
     snake = Snake()
     clock = pygame.time.Clock()
 
+    snake_speed = 100
+
     # Checking for the user input on every 100ms.
-    pygame.time.set_timer(pygame.USEREVENT, 100)
+    pygame.time.set_timer(pygame.USEREVENT, snake_speed)
 
 
     while True:
@@ -278,9 +390,10 @@ def main():
                         snake.direction = Vector2(1, 0)
                 elif event.key == pygame.K_LEFT:
                     if (snake.direction != Vector2(1, 0)):
-                        snake.direction = Vector2(-1, 0) 
-        draw_screen()
+                        snake.direction = Vector2(-1, 0)
+
         check_fail()
+        draw_screen()
         clock.tick(FPS)
 
 # Execute main() when the application is executed directly.
