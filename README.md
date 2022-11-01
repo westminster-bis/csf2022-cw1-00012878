@@ -1,9 +1,28 @@
-# CS fundamentals CW1 part B task description:
+# CS fundamentals CW1 part B
 
-## Demonstrate your knowledge of Python by modifying a small simple game, “Hungry Snake”, where you need to demonstrate your knowledge of python syntax, use of 3 different data types, conditionals, loop, functions. 
+This is a Coursework 1 "Part B" of the CSFun module (2022).
+<br><br>
+Welcome friend! This is fast, funny and addictive 2D Snake game written powered by ```Python``` and ```pygame``` module.
+<br>
+Before running the **main.py** file, make sure you have ```python``` and ```pygame``` installed.
 
-Well commented and organised code will receive higher marks. Procedural or object-oriented approach to programming is appreciated. Modifications can include input from the  user, adding different levels with increasing difficulty, more snakes on screen, snakes with changing colours. Use your creativity! The code examples should be pushed to a private git repository.
+## Game Logic
+The player has to collect food accroes the grass field without hitting itself and trespassing viewport border.
+The Snake grows every 2nd food eaten. As the player achieves every 15th score point the hard-core mode will activate. Hard-core mode will disappear after eating 4 units of food. Before the hard-core mode, there will be a warning for the player.
 
-source https://www.edureka.co/blog/snake-game-with-pygame/
+There is no menu for the game since the functionality of the game is small, and the menu would be redundant and more resource-intensive rendering.
 
-Good luck!
+Soun effects are made funny on purpose so that the player smiles at least! :D
+
+Enjoy!
+
+Created by 00012878
+
+## Reference
+Audio and Graphics sources:
+1. https://rembound.com/files/creating-a-snake-game-tutorial-with-html5/snake-graphics.png
+2. https://www.pngrepo.com/
+3. https://www.1001freefonts.com/ubuntu.font
+4. https://pixabay.com/sound-effects/
+5. https://mixkit.co/free-sound-effects/
+6. https://opengameart.org/content/platformer-game-music-pack
